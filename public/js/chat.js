@@ -56,6 +56,10 @@ socket.on('newMessage', function (message) {
   scrollToBottom();
 });// on newMessage
 
+socket.on('userTaken', () => {
+  alert('user is taken');
+}); // on userTaken
+
 socket.on('newLocationMessage', function (message) {
   var formattedTime = moment(message.createdAt).format('h:mm a');
   var template = $('#location-message-template').html();
@@ -86,7 +90,6 @@ locationButton.on('click', function (){
   if (!navigator.geolocation) {
     return alert('Geolocation not supported by your browser.');
   }
-
   locationButton.attr('disabled', 'disabled').text('Sending location...');
 
   navigator.geolocation.getCurrentPosition(function (position){

@@ -4,7 +4,7 @@ const express = require('express');
 const socketIO = require('socket.io');
 
 const {generateMessage, generateLocationMessage} = require('./utils/message');
-const {isRealString} = require('./utils/validation');
+const {isRealString, userTaken} = require('./utils/validation');
 const {Users} = require('./utils/users');
 
 const publicPath = path.join(__dirname, '../public');
@@ -18,15 +18,18 @@ app.use(express.static(publicPath));
 
 io.on('connection', (socket) => {
   console.log('New user connected');
-
   socket.on('join', (params, callback) => {
-    if (!isRealString(params.name) || !isRealString(params.room)) {
+    var roomUpdate = params.room.toLowerCase().trim();
+    var nameUpdate = params.name.trim();
+    if (!isRealString(nameUpdate) || !isRealString(roomUpdate)) {
       return callback('Name and room name are required.');
+    } else if (userTaken(nameUpdate, users.getUserList(roomUpdate))) {
+      return callback('User taken');
     }
-    var roomUpdate = params.room.toLowerCase();
+    console.log('userTaken', userTaken(params.name, users.getUserList(roomUpdate)));
     socket.join(roomUpdate);
     users.removeUser(socket.id);
-    users.addUser(socket.id, params.name, roomUpdate);
+    users.addUser(socket.id, nameUpdate, roomUpdate);
     io.to(roomUpdate).emit('updateUserList', users.getUserList(roomUpdate));
     socket.emit('newMessage', generateMessage('Admin', 'Welcome to the chat app'));
     socket.broadcast.to(roomUpdate).emit('newMessage', generateMessage('Admin', `${params.name} has joined.`));
@@ -44,8 +47,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('createLocationMessage', (coords) => {
+    console.log('coords', coords);
     var user = users.getUser(socket.id);
-
     if (user) {
       io.to(user.room).emit('newLocationMessage', generateLocationMessage(user.name, coords.latitude, coords.longitude));
     }
